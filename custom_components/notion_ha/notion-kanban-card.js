@@ -256,10 +256,17 @@ class NotionKanbanCard extends HTMLElement {
       return;
     }
 
-    const attrs    = stateObj.attributes || {};
-    const sections = (attrs.sections || []).filter(
+    const attrs = stateObj.attributes || {};
+    let sections = (attrs.sections || []).filter(
       (s) => !(this._config.hide_sections || []).includes(s.name)
     );
+
+    // Apply custom column order if specified
+    const order = this._config.column_order;
+    if (order && order.length) {
+      const idx = (s) => { const i = order.indexOf(s.name); return i === -1 ? 9999 : i; };
+      sections = [...sections].sort((a, b) => idx(a) - idx(b));
+    }
     const allItems   = attrs.items || [];
     const activeCount = allItems.filter((i) => !i.checked).length;
     const title = this._config.title

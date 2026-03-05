@@ -240,6 +240,8 @@ class NotionKanbanCard extends HTMLElement {
     if (changed === this._lastChanged) return;
     this._lastChanged = changed;
 
+    // Real data arrived — clear optimistic overrides
+    this._optimistic = {};
     this._render();
   }
 
@@ -275,7 +277,16 @@ class NotionKanbanCard extends HTMLElement {
       const idx = (s) => { const i = order.indexOf(s.name); return i === -1 ? 9999 : i; };
       sections = [...sections].sort((a, b) => idx(a) - idx(b));
     }
-    const allItems   = attrs.items || [];
+    // Apply optimistic moves (local overrides until sensor confirms)
+    const rawItems = attrs.items || [];
+    const allItems = rawItems.map((item) => {
+      const newStatus = this._optimistic?.[item.id];
+      if (!newStatus) return item;
+      const newSection = sections.find((s) => s.name === newStatus);
+      return newSection
+        ? { ...item, status: newStatus, section_id: newSection.id }
+        : item;
+    });
     const activeCount = allItems.filter((i) => !i.checked).length;
     const title = this._config.title
       || stateObj.attributes.friendly_name
@@ -513,6 +524,11 @@ class NotionKanbanCard extends HTMLElement {
 
   /* ---- service call ------------------------------------------------------ */
   _moveItem(itemId, targetStatus) {
+    // Optimistic update — re-render immediately before the API round-trip
+    this._optimistic = this._optimistic || {};
+    this._optimistic[itemId] = targetStatus;
+    this._render();
+
     this._hass.callService("notion_ha", "set_item_status", {
       item_id: itemId,
       status:  targetStatus,

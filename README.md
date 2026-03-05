@@ -64,17 +64,40 @@ Add a **Todo** card to any dashboard and select the Notion todo entity. You can 
 
 ### Kanban card
 
-Install [todoist-kanban-card](https://github.com/corte/todoist-kanban-card) or [power-todoist-card](https://github.com/pgorod/power-todoist-card) via HACS.
+The kanban sensor outputs a Todoist-compatible JSON structure that works with existing kanban Lovelace cards — no modifications needed.
 
-Configure a REST sensor pointing at the Notion kanban sensor entity:
+#### Step 1 — Install a kanban card via HACS
 
+Choose one:
+
+| Card | HACS link |
+|------|-----------|
+| [todoist-kanban-card](https://github.com/corte/todoist-kanban-card) | [![Open your Home Assistant instance and add a custom repository.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=corte&repository=todoist-kanban-card&category=plugin) |
+| [power-todoist-card](https://github.com/pgorod/power-todoist-card) | [![Open your Home Assistant instance and add a custom repository.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pgorod&repository=power-todoist-card&category=plugin) |
+
+#### Step 2 — Add the card to your dashboard
+
+In your Lovelace dashboard, add a **Manual card** with the following YAML (replace the entity with your own — it will be named after your database):
+
+**todoist-kanban-card:**
 ```yaml
-# In your Lovelace card config
 type: custom:todoist-kanban-card
 entity: sensor.personal_to_do_kanban
 ```
 
-The sensor's state attributes expose `sections` (kanban columns) and `items` (tasks) in the format these cards expect.
+**power-todoist-card:**
+```yaml
+type: custom:power-todoist-card
+entity: sensor.personal_to_do_kanban
+```
+
+The sensor entity name is derived from your database name. If your database is called "Personal To-Do", the sensor will be `sensor.personal_to_do_kanban`. You can confirm the exact name in **Settings → Devices & Services → Notion**.
+
+#### How it works
+
+The sensor exposes `sections` (your kanban columns, derived from the status values you configured) and `items` (your tasks) as state attributes in the exact format these cards expect. The card reads from the sensor and renders the columns — no Todoist account or API key required.
+
+> **Note:** Drag-and-drop write-back between columns is not supported — these cards are hardcoded to call Todoist's API for that. Use the HA **Todo card** to create, complete, and delete tasks, which writes back to Notion in real time.
 
 ## Limitations
 

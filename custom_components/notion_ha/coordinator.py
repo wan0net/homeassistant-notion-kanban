@@ -1,8 +1,10 @@
 """DataUpdateCoordinator for Notion todo databases."""
 from __future__ import annotations
 
+import json
 import logging
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -134,6 +136,9 @@ class NotionTodoCoordinator(DataUpdateCoordinator):
         self.status_property = status_property
         self.active_statuses = active_statuses
         self.completed_statuses = completed_statuses
+        self._cache_path = Path(hass.config.path(
+            f".notion_ha_cache_{database_id.replace('-', '')}.json"
+        ))
 
         super().__init__(
             hass,
@@ -142,19 +147,46 @@ class NotionTodoCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=scan_interval),
         )
 
+    def _load_cache(self) -> dict[str, Any] | None:
+        """Return cached data from disk, or None if unavailable."""
+        try:
+            return json.loads(self._cache_path.read_text())
+        except Exception:
+            return None
+
+    def _save_cache(self, data: dict[str, Any]) -> None:
+        """Persist data to disk cache."""
+        try:
+            self._cache_path.write_text(json.dumps(data))
+        except Exception as err:
+            _LOGGER.warning("Could not write Notion cache: %s", err)
+
+    async def async_config_entry_first_refresh(self) -> None:
+        """Load from cache immediately, then kick off a live refresh."""
+        cached = self._load_cache()
+        if cached:
+            self.data = cached
+            _LOGGER.debug("Loaded %d items from Notion cache", len(cached.get("items", [])))
+        await super().async_config_entry_first_refresh()
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch pages from Notion and transform into usable structures."""
         try:
             pages = await self.client.query_database(self.database_id)
         except Exception as err:
+            if self.data:
+                _LOGGER.warning("Notion fetch failed, using cached data: %s", err)
+                return self.data
             raise UpdateFailed(f"Error fetching Notion data: {err}") from err
 
-        return transform_pages(
+        data = transform_pages(
             pages,
             self.status_property,
             self.active_statuses,
             self.completed_statuses,
         )
+        self._save_cache(data)
+        return data
 
     # --- Write-back helpers ---
 

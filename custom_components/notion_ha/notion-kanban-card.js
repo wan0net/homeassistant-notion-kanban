@@ -232,7 +232,8 @@ class NotionKanbanCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    // Don't re-render mid-drag — it destroys the dragged element
+    if (!this._drag) this._render();
   }
 
   getCardSize() { return 4; }

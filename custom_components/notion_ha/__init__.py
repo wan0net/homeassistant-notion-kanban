@@ -5,8 +5,10 @@ from pathlib import Path
 
 import voluptuous as vol
 
-from homeassistant.components.frontend import add_extra_js_url
+import uuid
+
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.helpers.storage import Store
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_SCAN_INTERVAL, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -67,6 +69,18 @@ _CARD_URL = "/notion_ha/notion-kanban-card.js"
 _CARD_REGISTERED = f"{DOMAIN}_card_registered"
 
 
+async def _ensure_lovelace_resource(hass: HomeAssistant, url: str) -> None:
+    """Persist the card as a Lovelace resource so HA loads it before rendering."""
+    store = Store(hass, 1, "lovelace_resources")
+    data = await store.async_load() or {"items": []}
+    if any(url in item.get("url", "") for item in data.get("items", [])):
+        return
+    data.setdefault("items", []).append(
+        {"id": uuid.uuid4().hex, "url": url, "type": "module"}
+    )
+    await store.async_save(data)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Serve and inject the bundled Lovelace card (once per HA lifetime)
     if not hass.data.get(_CARD_REGISTERED):
@@ -77,7 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 cache_headers=False,
             )
         ])
-        add_extra_js_url(hass, _CARD_URL)
+        await _ensure_lovelace_resource(hass, _CARD_URL)
         hass.data[_CARD_REGISTERED] = True
 
     session = async_get_clientsession(hass)

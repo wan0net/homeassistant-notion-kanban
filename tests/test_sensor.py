@@ -18,15 +18,19 @@ ITEMS = [
         "id": "p1",
         "content": "Buy groceries",
         "status": "Do Next",
+        "section_id": "do_next",
         "due_date": "2026-03-06",
         "checked": False,
+        "labels": [],
     },
     {
         "id": "p2",
         "content": "Old task",
         "status": "Done",
+        "section_id": "done",
         "due_date": None,
         "checked": True,
+        "labels": [],
     },
 ]
 
@@ -56,12 +60,12 @@ def test_native_value_no_data():
     assert sensor.native_value == 0
 
 
-def test_attributes_excludes_completed():
+def test_attributes_includes_all_items():
     sensor = make_sensor()
     attrs = sensor.extra_state_attributes
     item_ids = [i["id"] for i in attrs["items"]]
     assert "p1" in item_ids
-    assert "p2" not in item_ids
+    assert "p2" in item_ids
 
 
 def test_attributes_section_id_format():
@@ -84,8 +88,10 @@ def test_attributes_no_due_date():
             "id": "p1",
             "content": "No due",
             "status": "Do Next",
+            "section_id": "do_next",
             "due_date": None,
             "checked": False,
+            "labels": [],
         }
     ]
     sensor = make_sensor(data={"sections": SECTIONS, "items": items})

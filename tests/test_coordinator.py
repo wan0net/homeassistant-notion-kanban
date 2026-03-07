@@ -41,10 +41,10 @@ def test_transform_includes_completed():
     assert items["p2"]["checked"] is True
 
 
-def test_transform_sections_from_active_statuses():
+def test_transform_sections_from_all_statuses():
     data = transform([])
     section_names = [s["name"] for s in data["sections"]]
-    assert section_names == ACTIVE
+    assert section_names == ACTIVE + COMPLETED
 
 
 def test_transform_section_ids_slugified():
@@ -75,7 +75,7 @@ def test_transform_unknown_status_excluded():
 def test_transform_empty_pages():
     data = transform([])
     assert data["items"] == []
-    assert len(data["sections"]) == len(ACTIVE)
+    assert len(data["sections"]) == len(ACTIVE) + len(COMPLETED)
 
 
 def test_transform_content_extracted():

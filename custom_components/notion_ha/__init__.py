@@ -72,7 +72,8 @@ _CARD_REGISTERED = f"{DOMAIN}_card_registered"
 async def _ensure_lovelace_resource(hass: HomeAssistant, url: str) -> None:
     """Register the card as a Lovelace resource (in-memory + persistent storage)."""
     # Try the live in-memory collection first — updates both memory and storage
-    resources = hass.data.get("lovelace", {}).get("resources")
+    lovelace = hass.data.get("lovelace")
+    resources = getattr(lovelace, "resources", None)
     if resources is not None:
         try:
             existing = [r for r in resources.async_items() if url in r.get("url", "")]
